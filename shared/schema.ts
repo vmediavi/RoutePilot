@@ -15,4 +15,18 @@ export const insertUserSchema = createInsertSchema(users).pick({
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type User = typeof users.$inferSelect & {
+  role?: 'driver' | 'customer';
+  profile?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    avatar?: string;
+    rating?: number;
+    totalTrips?: number;
+    bio?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+};

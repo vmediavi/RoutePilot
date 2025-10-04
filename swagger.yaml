@@ -1,0 +1,1777 @@
+openapi: 3.0.3
+info:
+  title: RoutePilot API
+  description: |
+    Mock API for RoutePilot - a ridesharing platform connecting drivers and customers.
+
+    This API supports real-time location tracking, route management, booking system,
+    and in-app messaging between drivers and customers.
+
+    **Features:**
+    - User authentication (register, login, logout)
+    - Route creation and management (drivers)
+    - Booking system (customers)
+    - Real-time location tracking
+    - In-app messaging system
+    - Statistics and analytics
+    - WebSocket support for real-time updates
+  version: 1.0.0
+  contact:
+    name: RoutePilot Support
+    email: support@routepilot.com
+servers:
+  - url: http://localhost:5000/api
+    description: Local development server
+  - url: http://localhost:5000
+    description: WebSocket server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Routes
+    description: Route creation, search, and management
+  - name: Bookings
+    description: Booking creation and management
+  - name: Chat
+    description: In-app messaging between drivers and customers
+  - name: Location
+    description: Real-time location tracking and history
+  - name: Statistics
+    description: User statistics and analytics
+  - name: System
+    description: System health and API information
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: Session token obtained from login/register
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        role:
+          type: string
+          enum: [driver, customer]
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UserProfile:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        avatar:
+          type: string
+          format: uri
+        rating:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 5
+        totalTrips:
+          type: integer
+        bio:
+          type: string
+
+    Route:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        driverId:
+          type: string
+          format: uuid
+        driverName:
+          type: string
+        driverAvatar:
+          type: string
+          format: uri
+        driverRating:
+          type: number
+          format: float
+        routeName:
+          type: string
+        origin:
+          type: string
+        destination:
+          type: string
+        departureDate:
+          type: string
+          format: date
+        departureTime:
+          type: string
+          format: time
+        stops:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteStop'
+        totalSeats:
+          type: integer
+          minimum: 1
+          maximum: 8
+        availableSeats:
+          type: integer
+        price:
+          type: number
+          format: float
+        notes:
+          type: string
+        status:
+          type: string
+          enum: [active, cancelled, completed]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    RouteStop:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        routeId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        estimatedTime:
+          type: string
+          format: time
+        order:
+          type: integer
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        routeId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        customerName:
+          type: string
+        customerAvatar:
+          type: string
+          format: uri
+        driverId:
+          type: string
+          format: uuid
+        driverName:
+          type: string
+        driverAvatar:
+          type: string
+          format: uri
+        origin:
+          type: string
+        destination:
+          type: string
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+          format: time
+        seats:
+          type: integer
+        totalPrice:
+          type: number
+          format: float
+        pricePerSeat:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled, completed]
+        driverConfirmed:
+          type: boolean
+        customerConfirmed:
+          type: boolean
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        bookingId:
+          type: string
+          format: uuid
+        driverId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        driverName:
+          type: string
+        customerName:
+          type: string
+        driverAvatar:
+          type: string
+          format: uri
+        customerAvatar:
+          type: string
+          format: uri
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        lastMessageAt:
+          type: string
+          format: date-time
+        unreadCount:
+          type: integer
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversationId:
+          type: string
+          format: uuid
+        senderId:
+          type: string
+          format: uuid
+        senderName:
+          type: string
+        recipientId:
+          type: string
+          format: uuid
+        text:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        read:
+          type: boolean
+        type:
+          type: string
+          enum: [text, system]
+
+    LocationUpdate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+        accuracy:
+          type: number
+          format: float
+        timestamp:
+          type: string
+          format: date-time
+        speed:
+          type: number
+          format: float
+        heading:
+          type: number
+          format: float
+
+    DriverStats:
+      type: object
+      properties:
+        activeRoutes:
+          type: integer
+        totalBookings:
+          type: integer
+        pendingBookings:
+          type: integer
+        completedTrips:
+          type: integer
+        earnings:
+          type: number
+          format: float
+        rating:
+          type: number
+          format: float
+        totalReviews:
+          type: integer
+
+    CustomerStats:
+      type: object
+      properties:
+        totalBookings:
+          type: integer
+        completedTrips:
+          type: integer
+        totalSpent:
+          type: number
+          format: float
+        favoriteRoutes:
+          type: array
+          items:
+            type: string
+        savedMoney:
+          type: number
+          format: float
+
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        message:
+          type: string
+        error:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+
+    PaginationInfo:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+
+paths:
+  # Authentication Endpoints
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: Create a new user account (driver or customer)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+                - role
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                password:
+                  type: string
+                  minLength: 6
+                role:
+                  type: string
+                  enum: [driver, customer]
+                profile:
+                  type: object
+                  properties:
+                    firstName:
+                      type: string
+                    lastName:
+                      type: string
+                    email:
+                      type: string
+                      format: email
+                    phone:
+                      type: string
+      responses:
+        '201':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      token:
+                        type: string
+        '400':
+          description: Validation error or username exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and create session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      token:
+                        type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: Destroy current session
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user info
+      description: Retrieve authenticated user's information
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User information retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/session/validate:
+    get:
+      tags:
+        - Authentication
+      summary: Validate session
+      description: Check if current session is valid
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Session is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      valid:
+                        type: boolean
+                      userId:
+                        type: string
+        '401':
+          description: Session invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Routes Endpoints
+  /routes:
+    get:
+      tags:
+        - Routes
+      summary: Search and list routes
+      description: Get list of routes with optional filters and pagination
+      parameters:
+        - name: origin
+          in: query
+          schema:
+            type: string
+        - name: destination
+          in: query
+          schema:
+            type: string
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: minSeats
+          in: query
+          schema:
+            type: integer
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+        - name: driverId
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Routes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Route'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationInfo'
+
+    post:
+      tags:
+        - Routes
+      summary: Create new route
+      description: Create a new route (drivers only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - routeName
+                - origin
+                - destination
+                - departureDate
+                - departureTime
+                - totalSeats
+                - price
+                - stops
+              properties:
+                routeName:
+                  type: string
+                origin:
+                  type: string
+                destination:
+                  type: string
+                departureDate:
+                  type: string
+                  format: date
+                departureTime:
+                  type: string
+                  format: time
+                totalSeats:
+                  type: integer
+                  minimum: 1
+                  maximum: 8
+                price:
+                  type: number
+                  minimum: 0
+                stops:
+                  type: array
+                  minItems: 2
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      estimatedTime:
+                        type: string
+                      order:
+                        type: integer
+                      latitude:
+                        type: number
+                      longitude:
+                        type: number
+                notes:
+                  type: string
+      responses:
+        '201':
+          description: Route created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Route'
+        '403':
+          description: Only drivers can create routes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /routes/{id}:
+    get:
+      tags:
+        - Routes
+      summary: Get route details
+      description: Retrieve detailed information about a specific route
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Route details retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Route'
+        '404':
+          description: Route not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Routes
+      summary: Update route
+      description: Update route information (owner only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                routeName:
+                  type: string
+                departureDate:
+                  type: string
+                departureTime:
+                  type: string
+                totalSeats:
+                  type: integer
+                price:
+                  type: number
+                notes:
+                  type: string
+                status:
+                  type: string
+                  enum: [active, cancelled, completed]
+      responses:
+        '200':
+          description: Route updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Route'
+        '403':
+          description: Not authorized to update this route
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Routes
+      summary: Delete route
+      description: Delete a route (owner only, no active bookings)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Route deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '400':
+          description: Cannot delete route with active bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /routes/{id}/bookings:
+    get:
+      tags:
+        - Routes
+      summary: Get route bookings
+      description: Get all bookings for a specific route (owner only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Route bookings retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+
+  /routes/user/{userId}:
+    get:
+      tags:
+        - Routes
+      summary: Get user routes
+      description: Get all routes created by a specific user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User routes retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Route'
+
+  # Bookings Endpoints
+  /bookings:
+    get:
+      tags:
+        - Bookings
+      summary: Get current user bookings
+      description: Get all bookings for authenticated user with optional filters
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, cancelled, completed]
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [driver, customer]
+      responses:
+        '200':
+          description: Bookings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+
+    post:
+      tags:
+        - Bookings
+      summary: Create booking
+      description: Create a new booking request (customers only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - routeId
+                - seats
+              properties:
+                routeId:
+                  type: string
+                seats:
+                  type: integer
+                  minimum: 1
+                  maximum: 8
+                notes:
+                  type: string
+      responses:
+        '201':
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Booking'
+        '400':
+          description: Not enough seats or existing booking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /bookings/{id}:
+    get:
+      tags:
+        - Bookings
+      summary: Get booking details
+      description: Get detailed information about a specific booking
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Booking details retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Booking'
+        '403':
+          description: Not authorized to view this booking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /bookings/{id}/confirm:
+    put:
+      tags:
+        - Bookings
+      summary: Confirm booking
+      description: Confirm a booking (driver or customer)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Booking confirmed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Booking'
+        '400':
+          description: Booking not in pending status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /bookings/{id}/reject:
+    put:
+      tags:
+        - Bookings
+      summary: Reject booking
+      description: Reject a booking (drivers only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Booking rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Booking'
+        '403':
+          description: Only drivers can reject bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /bookings/{id}/cancel:
+    put:
+      tags:
+        - Bookings
+      summary: Cancel booking
+      description: Cancel a booking (driver or customer)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Booking cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Booking'
+        '400':
+          description: Cannot cancel booking in current status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /bookings/{id}/complete:
+    put:
+      tags:
+        - Bookings
+      summary: Complete booking
+      description: Mark booking as completed (drivers only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Booking completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Booking'
+        '403':
+          description: Only drivers can mark bookings as completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /bookings/user/{userId}:
+    get:
+      tags:
+        - Bookings
+      summary: Get user bookings
+      description: Get all bookings for a specific user (own bookings only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User bookings retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+
+  # Chat/Conversations Endpoints
+  /conversations:
+    get:
+      tags:
+        - Chat
+      summary: Get user conversations
+      description: Get all conversations for current user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Conversations retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+
+  /conversations/{bookingId}:
+    get:
+      tags:
+        - Chat
+      summary: Get/create conversation
+      description: Get or create conversation for a booking
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversation retrieved or created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Conversation'
+
+  /conversations/{conversationId}/messages:
+    get:
+      tags:
+        - Chat
+      summary: Get messages
+      description: Get all messages in a conversation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Messages retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      hasMore:
+                        type: boolean
+
+    post:
+      tags:
+        - Chat
+      summary: Send message
+      description: Send a new message in a conversation
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                type:
+                  type: string
+                  enum: [text, system]
+      responses:
+        '201':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Message'
+
+  /conversations/{conversationId}/read:
+    put:
+      tags:
+        - Chat
+      summary: Mark as read
+      description: Mark all messages in conversation as read
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Messages marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /conversations/booking/{bookingId}/exists:
+    get:
+      tags:
+        - Chat
+      summary: Check conversation exists
+      description: Check if conversation exists for a booking
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Check completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      exists:
+                        type: boolean
+                      conversationId:
+                        type: string
+
+  # Location Endpoints
+  /location/update:
+    post:
+      tags:
+        - Location
+      summary: Update location
+      description: Update driver's current location
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - latitude
+                - longitude
+                - accuracy
+              properties:
+                latitude:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                longitude:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+                accuracy:
+                  type: number
+                  minimum: 0
+                speed:
+                  type: number
+                heading:
+                  type: number
+      responses:
+        '200':
+          description: Location updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '403':
+          description: Only drivers can update location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /location/user/{userId}:
+    get:
+      tags:
+        - Location
+      summary: Get user location
+      description: Get current location of a user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Location retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/LocationUpdate'
+        '403':
+          description: Not authorized to view this location
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /location/user/{userId}/history:
+    get:
+      tags:
+        - Location
+      summary: Get location history
+      description: Get location history for a user (own history only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        '200':
+          description: Location history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LocationUpdate'
+
+    delete:
+      tags:
+        - Location
+      summary: Clear location history
+      description: Clear location history for a user (own history only)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Location history cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /location/nearby-drivers:
+    get:
+      tags:
+        - Location
+      summary: Find nearby drivers
+      description: Find drivers near a specific location
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: longitude
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: radius
+          in: query
+          schema:
+            type: integer
+            default: 5000
+            description: Radius in meters
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Nearby drivers found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        driver:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            username:
+                              type: string
+                            profile:
+                              $ref: '#/components/schemas/UserProfile'
+                        location:
+                          $ref: '#/components/schemas/LocationUpdate'
+                        distance:
+                          type: integer
+                          description: Distance in meters
+
+  /location/driver/{driverId}/route-progress:
+    get:
+      tags:
+        - Location
+      summary: Get route progress
+      description: Get driver's progress on active route
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Route progress retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      routeId:
+                        type: string
+                      currentLocation:
+                        $ref: '#/components/schemas/LocationUpdate'
+                      nextStop:
+                        $ref: '#/components/schemas/RouteStop'
+                      completedStops:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/RouteStop'
+                      estimatedArrival:
+                        type: string
+                        format: date-time
+                      progress:
+                        type: number
+                        format: float
+                        description: Progress percentage (0-1)
+
+  /location/statistics:
+    get:
+      tags:
+        - Location
+      summary: Get location statistics
+      description: Get location tracking statistics for driver
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Statistics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      totalLocationUpdates:
+                        type: integer
+                      averageAccuracy:
+                        type: number
+                      lastUpdate:
+                        type: string
+                        format: date-time
+                      isOnline:
+                        type: boolean
+                      averageSpeed:
+                        type: number
+
+  # Statistics Endpoints
+  /stats/driver/{driverId}:
+    get:
+      tags:
+        - Statistics
+      summary: Get driver statistics
+      description: Get statistical data for a driver
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Driver statistics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/DriverStats'
+
+  /stats/customer/{customerId}:
+    get:
+      tags:
+        - Statistics
+      summary: Get customer statistics
+      description: Get statistical data for a customer
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Customer statistics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/CustomerStats'
+
+  # System Endpoints
+  /health:
+    get:
+      tags:
+        - System
+      summary: Health check
+      description: Check API health status
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+
+  /:
+    get:
+      tags:
+        - System
+      summary: API documentation
+      description: Get API endpoints overview
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  version:
+                    type: string
+                  endpoints:
+                    type: object
+                    description: Overview of all available endpoints
+                  websocket:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                      events:
+                        type: array
+                        items:
+                          type: string
