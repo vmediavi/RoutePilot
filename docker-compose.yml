@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  trackride:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trackride-app
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - SESSION_SECRET=${SESSION_SECRET:-change-this-secret-in-production}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - trackride-network
+
+networks:
+  trackride-network:
+    driver: bridge
